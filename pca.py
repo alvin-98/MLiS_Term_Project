@@ -33,8 +33,8 @@ class PCA:
         eigenvalues, eigenvectors = self._eigen_decomp(cov_matrix)
 
         self.pcs_ = eigenvectors[:, :self.n_components_]
-        self.explained_variance_ = np.sum(eigenvalues)/np.sum(eigenvalues[:self.n_components_])
-        self.loadings_ = eigenvectors * np.sqrt(eigenvalues)
+        self.explained_variance_ = np.sum(eigenvalues[:self.n_components_]) / np.sum(eigenvalues)
+        self.loadings_ = eigenvectors[:, :self.n_components_] * np.sqrt(eigenvalues[:self.n_components_])
 
         return self
 
@@ -60,27 +60,3 @@ class PCA:
         eigenvectors = eigenvectors[:, sorted_idx]
 
         return eigenvalues, eigenvectors
-
-# pca = PCA( n_components=2)
-
-# np.random.seed(42)
-# data = np.random.rand(10, 2)
-# print("Data:\n", data)
-
-# data_transformed = pca.fit(data).transform(data)
-
-
-# print("my pca: \n", data_transformed)
-# print("Loadings: \n", pca.loadings_)
-# print("Explained variance ratio: \n", pca.explained_variance_ratio_)
-
-
-
-# from sklearn.decomposition import PCA
-
-# pca = PCA(n_components=2)
-# pca.fit(data)
-
-# x_pca = pca.transform(data)
-
-# print("sklearn_pca: \n", x_pca)
