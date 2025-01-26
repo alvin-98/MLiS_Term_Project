@@ -24,6 +24,12 @@ class HAC():
     def fit(self, X):
         """
         Performs HAC for the given data.
+        Merges clusters iteratively based on the chosen linkage criterion until
+        only n_clusters remain. Each datapoint is assigned a cluster label, and is
+        stored as '_labels' atrtibute.
+
+        To speed up the computation, it stores the cluster distances as a distance
+        matrix, which is updated after forming a new cluster.
 
         Args:
             X (np.ndarray of shape (n_samples, n_features)): data to cluster
