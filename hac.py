@@ -1,92 +1,121 @@
 import numpy as np
-import scipy.spatial.distance as dist
+import scipy as sp
 
-class HAC:
-    """
-    A simplified HAC implementation (single or complete linkage) that uses
-    a precomputed distance matrix and updates it at each iteration.
-    """
 
-    def __init__(self, n_clusters=2, linkage='single'):
+class HAC_naive:
+    """
+    Keeping this version just for now
+    """
+    def __init__(self, n_clusters, linkage='single'):
+        self.n_clusters = n_clusters
+        self.linkage = linkage
+
+    def fit(self, X):
+        n_clusters = X.shape[0]
+        clusters = [[i] for i in range(n_clusters)]
+
+        while len(clusters) > self.n_clusters:
+            min_distance = np.inf
+            clusters_to_merge = (0, 0)
+            
+            for i in range(0, len(clusters), 1):
+                for j in range(i+1, len(clusters), 1):
+                    dist_ij = self._calc_linkage(X, clusters[i], clusters[j])
+                    if (dist_ij < min_distance):
+                        min_distance = dist_ij
+                        clusters_to_merge = (i, j)
+
+            i, j = clusters_to_merge
+            clusters[i].extend(clusters[j])
+            del clusters[j]
+
+        self.labels_ = np.zeros(n_clusters, dtype=int)
+        for cluster_id, cluster in enumerate(clusters):
+            for idx in cluster:
+                self.labels_[idx] = cluster_id
+
+        return clusters
+    
+    def _calc_linkage(self, X, cluster_i, cluster_j):
+        if self.linkage == 'single':
+            return min(
+                sp.spatial.distance.euclidean(X[k], X[l]) 
+                for k in cluster_i 
+                for l in cluster_j)
+        elif self.linkage == 'complete':
+            return max(
+                sp.spatial.distance.euclidean(X[k], X[l]) 
+                for k in cluster_i 
+                for l in cluster_j)
+        else:
+            raise ValueError('Invalid linkage type')
+            
+
+class HAC():
+    """
+    This is an improved interation upon naive implementation.
+    will document later :D
+
+    """
+    def __init__(self, n_clusters, linkage='single'):
         self.n_clusters = n_clusters
         self.linkage = linkage
         self.labels_ = None
 
     def fit(self, X):
-        """
-        Fit the hierarchical clustering on X and return the final cluster merges.
-        """
-        n_samples = X.shape[0]
-        # Initially, each data point is its own cluster
-        clusters = {i: [i] for i in range(n_samples)}  # cluster_id -> list of point indices
+        n_clusters = X.shape[0]
+        clusters = {i: [i] for i in range(n_clusters)}
+        active_clusters = list(clusters.keys())
+        distance_matrix = self._distance_matrix(X)
 
-        # Precompute the full distance matrix (square form)
-        # This is an O(N^2) preprocessing, but done only once.
-        dist_matrix = dist.squareform(dist.pdist(X, metric='euclidean'))
+        while len(active_clusters) > self.n_clusters:
+            min_distance = np.inf
+            clusters_to_merge = (0, 0)
+            
+            for i in range(0, len(active_clusters), 1):
+                for j in range(i+1, len(active_clusters), 1):
+                    cid_i = active_clusters[i]
+                    cid_j = active_clusters[j]
+                    dist_ij = distance_matrix[cid_i, cid_j]
+                    if dist_ij < min_distance:
+                        min_distance = dist_ij
+                        clusters_to_merge = (cid_i, cid_j)
 
-        # Keep track of "active" clusters; each point starts in its own cluster (ID = i)
-        # We'll say cluster i is "active" if it hasn't been merged into another cluster
-        active = set(clusters.keys())  # set of cluster IDs still in play
+            cluster1, cluster2 = clusters_to_merge
+            clusters[cluster1].extend(clusters[cluster2])
 
-        # We will do exactly (n_samples - n_clusters) merges
-        for _ in range(n_samples - self.n_clusters):
-            # 1. Find the two closest active clusters
-            c1, c2 = None, None
-            min_dist = np.inf
-            active_list = list(active)
-            for i in range(len(active_list)):
-                for j in range(i+1, len(active_list)):
-                    cid_i = active_list[i]
-                    cid_j = active_list[j]
-                    # Distances between these two "clusters" is stored 
-                    # as dist_matrix of some representative indices. 
-                    # We can pick the first index in each cluster for reference
-                    # if we properly keep dist_matrix updated.
-                    d = dist_matrix[cid_i, cid_j]
-                    if d < min_dist:
-                        min_dist = d
-                        c1, c2 = cid_i, cid_j
-
-            # 2. Merge cluster c2 into cluster c1, remove c2 from active
-            clusters[c1].extend(clusters[c2])
-            del clusters[c2]
-            active.remove(c2)
-
-            # 3. Update the distance matrix for the newly formed cluster c1
-            for other_cid in active:
-                if other_cid == c1:
+            for cluster in active_clusters:
+                if cluster == cluster1:
                     continue
 
                 if self.linkage == 'single':
-                    # single linkage distance = min(dist(c1, other), dist(c2, other))
-                    new_dist = min(dist_matrix[c1, other_cid],
-                                   dist_matrix[c2, other_cid])
+                    new_dist = min(distance_matrix[cluster1, cluster],
+                                   distance_matrix[cluster2, cluster])
                 elif self.linkage == 'complete':
-                    # complete linkage distance = max(dist(c1, other), dist(c2, other))
-                    new_dist = max(dist_matrix[c1, other_cid],
-                                   dist_matrix[c2, other_cid])
+                    new_dist = max(distance_matrix[cluster1, cluster],
+                                   distance_matrix[cluster2, cluster])
                 else:
-                    raise ValueError('Invalid linkage')
+                    raise ValueError("invalid linkage type passed as an argument")
+                
+                distance_matrix[cluster1, cluster] = new_dist
+                distance_matrix[cluster, cluster1] = new_dist
 
-                # Symmetrically update distance matrix for c1
-                dist_matrix[c1, other_cid] = new_dist
-                dist_matrix[other_cid, c1] = new_dist
+            del clusters[cluster2]
+            active_clusters.remove(cluster2)
 
-            # Optionally set the distances for c2 to some large number (inf)
-            # so we never pick it again
-            dist_matrix[c2, :] = np.inf
-            dist_matrix[:, c2] = np.inf
+            self.labels_ = np.zeros(n_clusters, dtype=int)
+            label_id = 0
+            for cid in clusters:
+                for idx in clusters[cid]:
+                    self.labels_[idx] = label_id
+                label_id += 1
 
-        # Build final labels
-        # Now we have exactly self.n_clusters "active" clusters
-        self.labels_ = np.zeros(n_samples, dtype=int)
-        for label_idx, c_id in enumerate(clusters):
-            for sample_idx in clusters[c_id]:
-                self.labels_[sample_idx] = label_idx
 
-        return self
+    def _distance_matrix(self, X):
+        n_clusters = X.shape[0]
+        distance_matrix = np.zeros((n_clusters, n_clusters))
+        for i in range(n_clusters):
+            for j in range(n_clusters):
+                distance_matrix[i][j] = sp.spatial.distance.euclidean(X[i], X[j])
 
-    def predict(self, X):
-        # This is a stub. Typically hierarchical clustering doesn't do 'predict' 
-        # without re-fitting. We'll just return self.labels_.
-        return self.labels_
+        return distance_matrix
