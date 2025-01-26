@@ -2,60 +2,10 @@ import numpy as np
 import scipy as sp
 
 
-class HAC_naive:
-    """
-    Keeping this version just for now
-    """
-    def __init__(self, n_clusters, linkage='single'):
-        self.n_clusters = n_clusters
-        self.linkage = linkage
-
-    def fit(self, X):
-        n_clusters = X.shape[0]
-        clusters = [[i] for i in range(n_clusters)]
-
-        while len(clusters) > self.n_clusters:
-            min_distance = np.inf
-            clusters_to_merge = (0, 0)
-            
-            for i in range(0, len(clusters), 1):
-                for j in range(i+1, len(clusters), 1):
-                    dist_ij = self._calc_linkage(X, clusters[i], clusters[j])
-                    if (dist_ij < min_distance):
-                        min_distance = dist_ij
-                        clusters_to_merge = (i, j)
-
-            i, j = clusters_to_merge
-            clusters[i].extend(clusters[j])
-            del clusters[j]
-
-        self.labels_ = np.zeros(n_clusters, dtype=int)
-        for cluster_id, cluster in enumerate(clusters):
-            for idx in cluster:
-                self.labels_[idx] = cluster_id
-
-        return clusters
-    
-    def _calc_linkage(self, X, cluster_i, cluster_j):
-        if self.linkage == 'single':
-            return min(
-                sp.spatial.distance.euclidean(X[k], X[l]) 
-                for k in cluster_i 
-                for l in cluster_j)
-        elif self.linkage == 'complete':
-            return max(
-                sp.spatial.distance.euclidean(X[k], X[l]) 
-                for k in cluster_i 
-                for l in cluster_j)
-        else:
-            raise ValueError('Invalid linkage type')
-            
-
 class HAC():
     """
     This is an improved interation upon naive implementation.
     will document later :D
-
     """
     def __init__(self, n_clusters, linkage='single'):
         self.n_clusters = n_clusters
@@ -80,6 +30,11 @@ class HAC():
                     if dist_ij < min_distance:
                         min_distance = dist_ij
                         clusters_to_merge = (cid_i, cid_j)
+                    # for datapoints_i in clusters[cid_i]:
+                    #     for datapoints_j in clusters[cid_j]:
+                    #         if (distance_matrix[datapoints_i, datapoints_j] < min_distance):
+                    #             min_distance = distance_matrix[i, j]
+                    #             clusters_to_merge = (cid_i, cid_j)
 
             cluster1, cluster2 = clusters_to_merge
             clusters[cluster1].extend(clusters[cluster2])
@@ -109,6 +64,8 @@ class HAC():
                 for idx in clusters[cid]:
                     self.labels_[idx] = label_id
                 label_id += 1
+
+        return self
 
 
     def _distance_matrix(self, X):
