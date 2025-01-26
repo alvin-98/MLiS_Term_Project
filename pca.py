@@ -15,18 +15,19 @@ class PCA:
         self.std_ = None
         self.pcs_ = None
         self.explained_variance_ = None
-        self.loadings = None
+        self.loadings_ = None
 
 
     def fit(self, X):
         """
-        Compute parameters and principal components for the given dataset
+        Computes the principal components, feature loadings 
+        and explained variance by PCA for the given dataset
 
         Args:
-            X (np.ndarray): dataset
+            X (np.ndarray of shape (n_samples, n_features)): input dataset for PCA
 
         Returns:
-            self: an instance of the object
+            PCA: an instance of the object
         """
         self.mean_ = X.mean(axis=0)
         cov_matrix = np.cov(X - self.mean_, rowvar=False)
@@ -41,19 +42,36 @@ class PCA:
 
     def transform(self, X):
         """
-        Projects data into principal components
+        Projects data onto principal components obtained when calling the 
+        'fit' method, resulting in dimensionality rediced representation
+        of the input data
 
         Args:
-            X (np.ndarray): data to transform.
+            X (np.ndarray of shape (n_samples, n_features)): data to be transformed.
 
         Returns:
-            np.ndarray: data projected onto n principal components
+            np.ndarray of shape (n_samples, n_components): data projected onto n principal components
         """
         X = X - self.mean_
         return np.dot(X, self.pcs_)
 
 
     def _eigen_decomp(self, cov_matrix):
+        """
+        Eigenvalue decomposition of the covariance matrix.
+        Eigenvalues and eigenvectors are sorted in descending order of
+        respective eigenvalues.
+
+        Args:
+            cov_matrix (np.ndarray of shape (n_features, n_features)): covariance matrix
+
+        Returns:
+            tuple:
+                - eigenvalues (np.ndarray of shape (n_features,)): 
+                eigenvalues sorted in descending order
+                - eigenvectors (np.ndarray of shape (n_features, n_features)): 
+                eigenvectors sorted to match the order of eigenvalues
+        """
         eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
         sorted_idx = np.argsort(eigenvalues)[::-1]
         eigenvalues = eigenvalues[sorted_idx]
