@@ -78,3 +78,8 @@ class PCA:
         eigenvectors = eigenvectors[:, sorted_idx]
 
         return eigenvalues, eigenvectors
+
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(X)
+    
