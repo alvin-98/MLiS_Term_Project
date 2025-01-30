@@ -6,7 +6,7 @@ class HAC():
     """
     Implementation of Hierarchical Agglomerative Clustering (HAC).
     """
-    def __init__(self, n_clusters, linkage='single'):
+    def __init__(self, n_clusters, linkage='single', metric='euclidean'):
         """
         Args:
             n_clusters (int): target number of clusters
@@ -19,6 +19,7 @@ class HAC():
         """
         self.n_clusters = n_clusters
         self.linkage = linkage
+        self.metric = metric
         self.labels_ = None
 
     def fit(self, X):
@@ -100,10 +101,19 @@ class HAC():
         Returns:
             np: _description_
         """
-        n_clusters = X.shape[0]
-        distance_matrix = np.zeros((n_clusters, n_clusters))
-        for i in range(n_clusters):
-            for j in range(n_clusters):
-                distance_matrix[i][j] = sp.spatial.distance.euclidean(X[i], X[j])
+        n_init_clusters = X.shape[0]
+        distance_matrix = np.zeros((n_init_clusters, n_init_clusters))
+        for i in range(n_init_clusters):
+            for j in range(n_init_clusters):
+                if self.metric == 'euclidean':
+                    distance_matrix[i][j] = sp.spatial.distance.euclidean(X[i], X[j])
+                elif self.metric == 'manhattan':
+                    distance_matrix[i][j] = sp.spatial.distance.cityblock(X[i], X[j])
+                elif self.metric == 'cosine':
+                    distance_matrix[i][j] = sp.spatial.distance.cosine(X[i], X[j])
+                else:
+                    raise ValueError("invalide distance metric")
 
         return distance_matrix
+
+
