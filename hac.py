@@ -13,6 +13,8 @@ class HAC():
             linkage (str, optional): The linkage criterion for merging clusters. Defaults to 'single'.
                 - 'single': Minimum distance between points in clusters.
                 - 'complete': Maximum distance between points in clusters.
+                - 'ward': Minimizes the "increase" in within-cluster SSE. 
+                Calculated according to the Lance–Williams formula
 
          Raises:
             ValueError: If an invalid linkage criterion is provided.
@@ -21,6 +23,9 @@ class HAC():
         self.linkage = linkage
         self.metric = metric
         self.labels_ = None
+
+        if self.linkage == 'ward' and self.metric != 'euclidean':
+            raise ValueError("Ward linkage can be used only with euclidean")
 
     def fit(self, X):
         """
@@ -45,6 +50,7 @@ class HAC():
         clusters = {i: [i] for i in range(n_clusters)}
         remaining_clusters = list(clusters.keys())
         distance_matrix = self._distance_matrix(X)
+        c_sizes = {cid: 1 for cid in clusters.keys()}
 
         while len(remaining_clusters) > self.n_clusters:
             min_distance = np.inf
@@ -65,19 +71,31 @@ class HAC():
             for cluster in remaining_clusters:
                 if cluster == cluster1:
                     continue
-
+                
                 if self.linkage == 'single':
                     new_dist = min(distance_matrix[cluster1, cluster],
                                    distance_matrix[cluster2, cluster])
                 elif self.linkage == 'complete':
                     new_dist = max(distance_matrix[cluster1, cluster],
                                    distance_matrix[cluster2, cluster])
+                elif self.linkage == 'ward':
+                    nA = c_sizes[cluster1]
+                    nB = c_sizes[cluster2]
+                    nC = c_sizes[cluster]
+                    dAC = distance_matrix[cluster1, cluster]
+                    dBC = distance_matrix[cluster2, cluster]
+                    dAB = distance_matrix[cluster1, cluster2]
+                    new_dist = ((nA + nC) * dAC + 
+                                (nB + nC) * dBC - nC * dAB) / (nA + nB + nC)
                 else:
                     raise ValueError("invalid linkage type passed as an argument")
                 
                 distance_matrix[cluster1, cluster] = new_dist
                 distance_matrix[cluster, cluster1] = new_dist
 
+            c_sizes[cluster1] += c_sizes[cluster2]
+
+            del c_sizes[cluster2]
             del clusters[cluster2]
             remaining_clusters.remove(cluster2)
 
@@ -105,15 +123,17 @@ class HAC():
         distance_matrix = np.zeros((n_init_clusters, n_init_clusters))
         for i in range(n_init_clusters):
             for j in range(n_init_clusters):
-                if self.metric == 'euclidean':
-                    distance_matrix[i][j] = sp.spatial.distance.euclidean(X[i], X[j])
-                elif self.metric == 'manhattan':
-                    distance_matrix[i][j] = sp.spatial.distance.cityblock(X[i], X[j])
-                elif self.metric == 'cosine':
-                    distance_matrix[i][j] = sp.spatial.distance.cosine(X[i], X[j])
+                if self.linkage == 'ward':
+                    distance_matrix[i][j] = sp.spatial.distance.euclidean(X[i], X[j])**2
                 else:
-                    raise ValueError("invalide distance metric")
+                    if self.metric == 'euclidean':
+                        distance_matrix[i][j] = sp.spatial.distance.euclidean(X[i], X[j])
+                    elif self.metric == 'manhattan':
+                        distance_matrix[i][j] = sp.spatial.distance.cityblock(X[i], X[j])
+                    elif self.metric == 'cosine':
+                        distance_matrix[i][j] = sp.spatial.distance.cosine(X[i], X[j])
+                    else:
+                        raise ValueError("invalide distance metric")
 
         return distance_matrix
-
 
