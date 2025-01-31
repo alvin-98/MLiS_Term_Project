@@ -110,6 +110,9 @@ def compute_class_proportions(labels, classes):
     proportions = df.groupby('Cluster')['Class'].value_counts(normalize=True).unstack().fillna(0)
     print(proportions)
 
+
+
+
 # Hierarchical Clustering
 hac = HAC(n_clusters=2).fit(X_values)
 plot_clusters(X_values, hac.labels_, "HAC Clustering")

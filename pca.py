@@ -15,6 +15,7 @@ class PCA:
         self.std_ = None
         self.pcs_ = None
         self.explained_variance_ = None
+        self.explained_variance_ratio_ = None
         self.loadings_ = None
 
 
@@ -34,7 +35,8 @@ class PCA:
         eigenvalues, eigenvectors = self._eigen_decomp(cov_matrix)
 
         self.pcs_ = eigenvectors[:, :self.n_components_]
-        self.explained_variance_ = np.sum(eigenvalues[:self.n_components_]) / np.sum(eigenvalues)
+        self.explained_variance_ = eigenvalues[:self.n_components_]
+        self.explained_variance_ratio_ = self.explained_variance_ / np.sum(eigenvalues)
         self.loadings_ = eigenvectors[:, :self.n_components_] * np.sqrt(eigenvalues[:self.n_components_])
 
         return self
