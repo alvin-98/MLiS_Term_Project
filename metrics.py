@@ -9,6 +9,9 @@ def adjusted_rand_index(true_labels, pred_labels):
     E[Index] = how many pairs are expected to be clustered by chance
     Ideal Index = max number of pairs that could be concidered together in the best case
 
+    Implementation refers to the same formula as in sklearn,
+    wchich references "Comparing Partitions" paper by L. Hubert and P. Arabie
+
     Parameters
     ----------
     true_labels : array of shape (n_samples,), int
