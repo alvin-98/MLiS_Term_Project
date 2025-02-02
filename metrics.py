@@ -11,9 +11,9 @@ def adjusted_rand_index(true_labels, pred_labels):
 
     Parameters
     ----------
-    true_labels : array of shape (n_samples,)
+    true_labels : array of shape (n_samples,), int
         True cluster labels
-    pred_labels : array of shape (n_samples,)
+    pred_labels : array of shape (n_samples,), int
         Predicted cluster labels
 
     Returns
