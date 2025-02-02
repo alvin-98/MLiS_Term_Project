@@ -217,6 +217,10 @@ class HAC():
                     dAB = distance_matrix[cluster1, cluster2]
                     new_dist = ((nA + nC) * dAC + 
                                 (nB + nC) * dBC - nC * dAB) / (nA + nB + nC)
+                # If the distance is average, find the weighted avg of the distances
+                elif self.linkage == 'average':
+                    new_dist = (c_sizes[cluster1] * distance_matrix[cluster1, cluster] +
+                        c_sizes[cluster2] * distance_matrix[cluster2, cluster]) / (c_sizes[cluster1] + c_sizes[cluster2])
                 else:
                     raise ValueError("invalid linkage type passed as an argument")
                 
