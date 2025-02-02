@@ -3,6 +3,12 @@ import scipy.spatial.distance as spd
 
 def adjusted_rand_index(true_labels, pred_labels):
     """
+    Calculated adjusted rand index according to the formula:
+    ARI = (Index - E[Index])/(Ideal Index - E[Index])
+    Index = pairs that are clustered together
+    E[Index] = how many pairs are expected to be clustered by chance
+    Ideal Index = max number of pairs that could be concidered together in the best case
+
     Parameters
     ----------
     true_labels : array of shape (n_samples,)
@@ -24,55 +30,55 @@ def adjusted_rand_index(true_labels, pred_labels):
     if n_samples != pred_labels.shape[0]:
         raise ValueError("true_labels and pred_labels do not match in legth")
 
-    # Identifying unique clusters and mapping them to integer indices
+    # getting unique clusters and mapping them to integer indices
     unique_true = np.unique(true_labels)
     unique_pred = np.unique(pred_labels)
     n_true = unique_true.shape[0]
     n_pred = unique_pred.shape[0]
 
-    # Build dictionary: cluster label -> index
     label_to_index_true = {label: idx for idx, label in enumerate(unique_true)}
     label_to_index_pred = {label: idx for idx, label in enumerate(unique_pred)}
 
-    # 2. Construct the contingency matrix T of shape (n_pred, n_true)
+    # contingency matrix T (n_pred, n_true)
+    # counts the number of occurences when a datapoint falls into true label-pred label combination
     T = np.zeros((n_pred, n_true), dtype=np.int64)
     for t, p in zip(true_labels, pred_labels):
         i = label_to_index_pred[p]
         j = label_to_index_true[t]
         T[i, j] += 1
 
-    # A helper function for nC2 = n*(n-1)/2
+    # nC2 = n*(n-1)/2
     def comb2(x):
         return x * (x - 1) // 2
 
-    # 3. Compute 'a', 'b', 'c', and 'd' using the formula
-
-    # a = sum of comb2(T[i, j]) over all i, j
+    # a = sum of how many pairs can be chosen from each group 
+    # there are i*j groups
     a = sum(comb2(n_ij) for n_ij in T.flat)
 
-    # b = sum of comb2 of row sums
+    # b => how many pairs are in the same predicted cluster
     row_sums = T.sum(axis=1)
     b = sum(comb2(r) for r in row_sums)
 
-    # c = sum of comb2 of column sums
+    # c => how many pais are in the same true cluster
     col_sums = T.sum(axis=0)
     c = sum(comb2(c_) for c_ in col_sums)
 
-    # d = comb2(n_samples)
+    # d = n_samples choose 2 => total number of pairs that can be formed
     d = comb2(n_samples)
 
-    # 4. Compute the ARI using the standard formula
-    # denominator = 0.5*(b + c) - (b*c / d)
-    denominator = 0.5 * (b + c) - (b * c / d) if d != 0 else 0
+    # ARI = [a - (b*c / d)]/[0.5*(b + c) - (b*c / d)]
+    # This is according to the ARI using the permutation model
+    if d != 0:
+        expected_index = (b * c / d)
+        ideal_index = 0.5 * (b + c)
+        denominator = ideal_index - expected_index
 
-    # If the denominator is 0, that means either everything is in one cluster 
-    # or it's otherwise degenerate; define ARI = 0 in that case
-    if denominator == 0:
+        numerator = a - expected_index
+    else:
+        # denominator = 0
+        # denominator is 0 => everything is in one cluster
         return 0.0
-
-    # numerator = a - (b*c / d)
-    numerator = a - (b * c / d)
-
+    
     ari = numerator / denominator
     return ari
 
