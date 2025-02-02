@@ -12,6 +12,7 @@ class HAC():
             n_clusters (int): target number of clusters
             linkage (str, optional): The linkage criterion for merging clusters. Defaults to 'single'.
                 - 'single': Minimum distance between points in clusters.
+                - 'average': Average linkage.
                 - 'complete': Maximum distance between points in clusters.
                 - 'ward': Minimizes the "increase" in within-cluster SSE. 
                 Calculated according to the Lance–Williams formula
@@ -87,6 +88,9 @@ class HAC():
                     dAB = distance_matrix[cluster1, cluster2]
                     new_dist = ((nA + nC) * dAC + 
                                 (nB + nC) * dBC - nC * dAB) / (nA + nB + nC)
+                elif self.linkage == 'average':
+                    new_dist = (c_sizes[cluster1] * distance_matrix[cluster1, cluster] +
+                        c_sizes[cluster2] * distance_matrix[cluster2, cluster]) / (c_sizes[cluster1] + c_sizes[cluster2])
                 else:
                     raise ValueError("invalid linkage type passed as an argument")
                 
@@ -136,4 +140,3 @@ class HAC():
                         raise ValueError("invalide distance metric")
 
         return distance_matrix
-
